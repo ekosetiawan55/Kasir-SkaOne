@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SkaOne Phothography Invoice</title>
+<title>SkaOne Photography</title>
 
 <style>
 body{margin:0;font-family:Arial;background:#0f172a;color:#fff}
@@ -29,13 +29,16 @@ button{padding:10px;border:none;border-radius:6px;background:#2563eb;color:white
 .inv-table{width:100%;border-collapse:collapse}
 .inv-table th{background:#374151;color:white;padding:8px}
 .inv-table td{padding:8px;border-bottom:1px solid #ddd}
+
+.status-lunas{color:green;font-weight:bold}
+.status-belum{color:red;font-weight:bold}
 </style>
 </head>
 
 <body>
 <div class="container">
 
-<h1>Invoice</h1>
+<h1>Kasir PRO</h1>
 
 <div id="barangKasir" class="grid"></div>
 
@@ -53,8 +56,11 @@ button{padding:10px;border:none;border-radius:6px;background:#2563eb;color:white
 </table>
 
 <h3>Total: <span id="totalHarga">Rp 0</span></h3>
-<input id="uangPembeli" type="number" placeholder="Uang Pembeli">
-<div>Kembalian: <b id="kembalian">Rp 0</b></div>
+
+<input id="uangMuka" type="number" placeholder="Uang Muka (DP)">
+<div>Sisa Tagihan: <b id="sisaTagihan">Rp 0</b></div>
+<div>Status: <span id="statusPembayaran" class="status-belum">BELUM LUNAS</span></div>
+
 <br>
 <button onclick="buatInvoice()">BUAT INVOICE</button>
 </div>
@@ -115,18 +121,32 @@ function renderCart(){
 
   document.getElementById("totalHarga").textContent=rupiah(total);
 
-  const bayar=+document.getElementById("uangPembeli").value||0;
-  document.getElementById("kembalian").textContent=rupiah(bayar-total);
+  const dp=+document.getElementById("uangMuka").value||0;
+  const sisa=total-dp;
+
+  document.getElementById("sisaTagihan").textContent=rupiah(sisa);
+
+  const statusEl=document.getElementById("statusPembayaran");
+
+  if(sisa<=0 && total>0){
+    statusEl.textContent="LUNAS";
+    statusEl.className="status-lunas";
+  }else{
+    statusEl.textContent="BELUM LUNAS";
+    statusEl.className="status-belum";
+  }
 }
 
-document.getElementById("uangPembeli").oninput=renderCart;
+document.getElementById("uangMuka").oninput=renderCart;
 
 function buatInvoice(){
   const items=Object.values(cart);
   if(!items.length) return;
 
   const total=items.reduce((a,b)=>a+b.qty*b.harga,0);
-  const bayar=+document.getElementById("uangPembeli").value||0;
+  const dp=+document.getElementById("uangMuka").value||0;
+  const sisa=total-dp;
+  const status=sisa<=0 ? "LUNAS" : "BELUM LUNAS";
 
   document.getElementById("invoiceBox").innerHTML=`
     <div class="invoice">
@@ -157,12 +177,15 @@ function buatInvoice(){
       </table>
 
       <h3>Total: ${rupiah(total)}</h3>
-      Bayar: ${rupiah(bayar)}<br>
-      Kembali: ${rupiah(bayar-total)}
+      Uang Muka (DP): ${rupiah(dp)}<br>
+      Sisa Tagihan: ${rupiah(sisa)}<br>
+      <br>
+      <strong>Status: ${status}</strong>
     </div>
   `;
 
   cart={};
+  document.getElementById("uangMuka").value="";
   renderCart();
 }
 
