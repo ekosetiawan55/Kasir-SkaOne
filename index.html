@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasir PRO</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0f172a;
+  color:#fff;
+}
+
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:20px;
+}
+
+h1{
+  margin-bottom:20px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:15px;
+}
+
+.card{
+  background:#1f2937;
+  padding:15px;
+  border-radius:10px;
+  cursor:pointer;
+  text-align:center;
+  transition:0.2s;
+}
+.card:hover{ background:#374151; }
+
+.price{ color:#f59e0b; font-weight:bold }
+
+.cart{
+  background:#111827;
+  padding:20px;
+  border-radius:12px;
+  margin-top:25px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+
+th,td{
+  padding:8px;
+  border-bottom:1px solid #374151;
+  text-align:left;
+}
+
+th{ background:#1f2937 }
+
+button{
+  padding:10px 16px;
+  border:none;
+  border-radius:6px;
+  background:#2563eb;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+  margin-top:12px;
+  margin-right:10px;
+}
+
+.status-lunas{color:#22c55e;font-weight:bold}
+.status-belum{color:#ef4444;font-weight:bold}
+
+input, textarea{
+  padding:8px;
+  width:100%;
+  margin-top:10px;
+  border-radius:6px;
+  border:none;
+}
+
+.preview-box{
+  background:white;
+  color:black;
+  padding:25px;
+  margin-top:25px;
+  border-radius:10px;
+}
+.preview-box h2{
+  margin-top:0;
+}
+.footer-note{
+  margin-top:30px;
+  text-align:center;
+  font-size:14px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>Kasir PRO</h1>
+
+<div id="barangKasir" class="grid"></div>
+
+<div class="cart">
+
+<input id="namaPelanggan" placeholder="Nama Pelanggan">
+<textarea id="alamatPelanggan" placeholder="Alamat Pelanggan"></textarea>
+
+<table>
+<thead>
+<tr>
+<th>Barang</th>
+<th>Harga</th>
+<th>Qty</th>
+<th>Subtotal</th>
+</tr>
+</thead>
+<tbody id="cartBody"></tbody>
+</table>
+
+<h3>Total: <span id="totalHarga">Rp 0</span></h3>
+
+<input id="uangMuka" type="number" placeholder="Uang Muka (DP)">
+<div>Sisa Tagihan: <b id="sisaTagihan">Rp 0</b></div>
+<div>Status: <span id="statusPembayaran" class="status-belum">BELUM LUNAS</span></div>
+
+<button onclick="buatPreview()">PREVIEW INVOICE</button>
+<button onclick="downloadPDF()">DOWNLOAD PDF</button>
+
+</div>
+
+<div id="previewArea"></div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+const rupiah=n=>"Rp "+(n||0).toLocaleString("id-ID");
+
+let cart={};
+let cartBackup=[];
+let lastDP=0;
+let invoiceCounter=1;
+
+async function getBarang(){
+  const res=await fetch("barang.json");
+  return await res.json();
+}
+
+async function renderBarang(){
+  const list=await getBarang();
+  const container=document.getElementById("barangKasir");
+  container.innerHTML="";
+  list.forEach(b=>{
+    container.innerHTML+=`
+      <div class="card" onclick="addCart(${b.id})">
+        ${b.nama}<br>
+        <span class="price">${rupiah(b.harga)}</span>
+      </div>`;
+  });
+}
+
+async function addCart(id){
+  const list=await getBarang();
+  const b=list.find(x=>x.id===id);
+  if(!cart[id]) cart[id]={...b,qty:0};
+  cart[id].qty++;
+  renderCart();
+}
+
+function renderCart(){
+  const body=document.getElementById("cartBody");
+  body.innerHTML="";
+  let total=0;
+
+  Object.values(cart).forEach(i=>{
+    const sub=i.qty*i.harga;
+    total+=sub;
+    body.innerHTML+=`
+      <tr>
+        <td>${i.nama}</td>
+        <td>${rupiah(i.harga)}</td>
+        <td>${i.qty}</td>
+        <td>${rupiah(sub)}</td>
+      </tr>`;
+  });
+
+  document.getElementById("totalHarga").textContent=rupiah(total);
+
+  const dp=+document.getElementById("uangMuka").value||0;
+  const sisa=total-dp;
+
+  document.getElementById("sisaTagihan").textContent=rupiah(sisa);
+
+  const statusEl=document.getElementById("statusPembayaran");
+  if(sisa<=0 && total>0){
+    statusEl.textContent="LUNAS";
+    statusEl.className="status-lunas";
+  }else{
+    statusEl.textContent="BELUM LUNAS";
+    statusEl.className="status-belum";
+  }
+}
+
+document.getElementById("uangMuka").oninput=renderCart;
+
+function buatPreview(){
+  const items=Object.values(cart);
+  if(!items.length) return alert("Belum ada transaksi!");
+
+  const total=items.reduce((a,b)=>a+b.qty*b.harga,0);
+  const dp=+document.getElementById("uangMuka").value||0;
+  const sisa=total-dp;
+  const status=sisa<=0?"LUNAS":"BELUM LUNAS";
+
+  cartBackup=JSON.parse(JSON.stringify(items));
+  lastDP=dp;
+
+  const nama=document.getElementById("namaPelanggan").value;
+  const alamat=document.getElementById("alamatPelanggan").value;
+
+  let html=`
+  <div class="preview-box">
+    <h2>INVOICE</h2>
+    <b>SkaOne Photography</b><br>
+    Kalinampu, Seloharjo, Pundong, Bantul, Yogyakarta<br>
+    +62 857-1213-0175
+    <hr>
+    <b>Pelanggan:</b> ${nama}<br>
+    <b>Alamat:</b> ${alamat}
+    <hr>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <th>Item</th><th>Qty</th><th>Harga</th><th>Total</th>
+      </tr>`;
+
+  items.forEach(i=>{
+    const sub=i.qty*i.harga;
+    html+=`
+      <tr>
+        <td>${i.nama}</td>
+        <td>${i.qty}</td>
+        <td>${rupiah(i.harga)}</td>
+        <td>${rupiah(sub)}</td>
+      </tr>`;
+  });
+
+  html+=`
+    </table>
+    <hr>
+    Total: ${rupiah(total)}<br>
+    DP: ${rupiah(dp)}<br>
+    Sisa: ${rupiah(sisa)}<br>
+    <b>Status: ${status}</b>
+
+    <div class="footer-note">
+      Abadikan momentmu bersama SkaOne Photography<br>
+      skaonephotography@gmail.com
+    </div>
+  </div>`;
+
+  document.getElementById("previewArea").innerHTML=html;
+}
+
+async function downloadPDF(){
+  const { jsPDF } = window.jspdf;
+  if(!cartBackup.length) return alert("Klik PREVIEW dulu!");
+
+  const total=cartBackup.reduce((a,b)=>a+b.qty*b.harga,0);
+  const dp=lastDP;
+  const sisa=total-dp;
+  const status=sisa<=0?"LUNAS":"BELUM LUNAS";
+
+  const doc=new jsPDF();
+  let y=20;
+
+  doc.setFontSize(14);
+  doc.text("SkaOne Photography",20,y);
+  y+=6;
+  doc.setFontSize(10);
+  doc.text("Kalinampu, Seloharjo, Pundong, Bantul, Yogyakarta",20,y);
+  y+=5;
+  doc.text("+62 857-1213-0175",20,y);
+
+  doc.setFontSize(18);
+  doc.text("INVOICE",150,20);
+
+  y+=15;
+
+  cartBackup.forEach((i,index)=>{
+    const sub=i.qty*i.harga;
+    doc.text(`${index+1}. ${i.nama} (${i.qty}x) - ${rupiah(sub)}`,20,y);
+    y+=6;
+  });
+
+  y+=8;
+  doc.text("Total: "+rupiah(total),20,y); y+=6;
+  doc.text("DP: "+rupiah(dp),20,y); y+=6;
+  doc.text("Sisa: "+rupiah(sisa),20,y); y+=8;
+  doc.text("Status: "+status,20,y);
+
+  y+=20;
+  doc.setFontSize(10);
+  doc.text("Abadikan momentmu bersama SkaOne Photography",105,y,{align:"center"});
+  y+=5;
+  doc.text("skaonephotography@gmail.com",105,y,{align:"center"});
+
+  doc.save("INV-"+invoiceCounter+".pdf");
+  invoiceCounter++;
+}
+
+document.addEventListener("DOMContentLoaded",renderBarang);
+</script>
+
+</body>
+</html>
