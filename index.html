@@ -281,36 +281,88 @@ async function downloadPDF(){
   const sisa=total-dp;
   const status=sisa<=0?"LUNAS":"BELUM LUNAS";
 
-  const doc=new jsPDF();
+  const doc=new jsPDF("p","mm","a4");
+  const pageWidth=210;
   let y=20;
 
+  // ===== LOAD LOGO =====
+  try{
+    const logo = await loadImage("Logo.png");
+    doc.addImage(logo, "PNG", 15, 15, 30, 18);
+  }catch(e){
+    console.log("Logo tidak ditemukan");
+  }
+
+  // ===== HEADER COMPANY =====
   doc.setFontSize(14);
-  doc.text("SkaOne Photography",20,y);
-  y+=6;
+  doc.setFont(undefined,"bold");
+  doc.text("SkaOne Photography", 50, 20);
+
   doc.setFontSize(10);
-  doc.text("Kalinampu, Seloharjo, Pundong, Bantul, Yogyakarta",20,y);
-  y+=5;
-  doc.text("+62 857-1213-0175",20,y);
+  doc.setFont(undefined,"normal");
+  doc.text("Kalinampu, Seloharjo, Pundong, Bantul, Yogyakarta", 50, 26);
+  doc.text("+62 857-1213-0175", 50, 31);
 
+  // ===== TITLE =====
   doc.setFontSize(18);
-  doc.text("INVOICE",150,20);
+  doc.setFont(undefined,"bold");
+  doc.text("INVOICE", pageWidth-20, 20, {align:"right"});
 
-  y+=15;
+  y=45;
 
+  // ===== TABLE HEADER =====
+  doc.setFillColor(31,41,55); // gelap
+  doc.rect(15,y,180,8,"F");
+
+  doc.setTextColor(255,255,255); // putih
+  doc.setFontSize(11);
+  doc.text("No",20,y+5);
+  doc.text("Item",30,y+5);
+  doc.text("Qty",130,y+5);
+  doc.text("Harga",145,y+5);
+  doc.text("Total",170,y+5);
+
+  y+=10;
+  doc.setTextColor(0,0,0); // balik ke hitam
+
+  // ===== TABLE BODY =====
   cartBackup.forEach((i,index)=>{
     const sub=i.qty*i.harga;
-    doc.text(`${index+1}. ${i.nama} (${i.qty}x) - ${rupiah(sub)}`,20,y);
-    y+=6;
+
+    doc.text(String(index+1),20,y);
+    doc.text(i.nama,30,y);
+    doc.text(String(i.qty),132,y);
+    doc.text(rupiah(i.harga),145,y);
+    doc.text(rupiah(sub),170,y);
+
+    y+=8;
   });
 
+  // ===== TOTAL SECTION =====
+  y+=10;
+  doc.line(120,y,195,y);
   y+=8;
-  doc.text("Total: "+rupiah(total),20,y); y+=6;
-  doc.text("DP: "+rupiah(dp),20,y); y+=6;
-  doc.text("Sisa: "+rupiah(sisa),20,y); y+=8;
-  doc.text("Status: "+status,20,y);
 
-  y+=20;
+  doc.text("Total",130,y);
+  doc.text(rupiah(total),170,y,{align:"right"});
+  y+=8;
+
+  doc.text("DP",130,y);
+  doc.text(rupiah(dp),170,y,{align:"right"});
+  y+=8;
+
+  doc.setFont(undefined,"bold");
+  doc.text("Sisa",130,y);
+  doc.text(rupiah(sisa),170,y,{align:"right"});
+  y+=10;
+
+  doc.setFontSize(12);
+  doc.text("Status: "+status,15,y);
+
+  // ===== FOOTER =====
+  y=280;
   doc.setFontSize(10);
+  doc.setFont(undefined,"normal");
   doc.text("Abadikan momentmu bersama SkaOne Photography",105,y,{align:"center"});
   y+=5;
   doc.text("skaonephotography@gmail.com",105,y,{align:"center"});
