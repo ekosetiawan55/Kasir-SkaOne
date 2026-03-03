@@ -25,6 +25,7 @@ h1{ margin-bottom:20px; }
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
   gap:15px;
+  margin-bottom:25px;
 }
 
 .card{
@@ -43,7 +44,14 @@ h1{ margin-bottom:20px; }
   background:#111827;
   padding:20px;
   border-radius:12px;
-  margin-top:25px;
+}
+
+input, textarea{
+  width:100%;
+  padding:8px;
+  margin-bottom:8px;
+  border-radius:6px;
+  border:none;
 }
 
 table{
@@ -71,7 +79,7 @@ button{
   margin-right:10px;
 }
 
-/* ===== INVOICE STYLE ===== */
+/* INVOICE STYLE */
 
 .preview-box{
   background:#fff;
@@ -90,9 +98,7 @@ button{
   align-items:flex-start;
 }
 
-.logo-area img{
-  width:140px;
-}
+.logo-area img{ width:140px; }
 
 .company-text{
   font-size:13px;
@@ -112,6 +118,7 @@ button{
 .status{
   margin:15px 0;
   font-weight:bold;
+  font-size:15px;
 }
 
 .invoice-table{
@@ -168,9 +175,14 @@ button{
 
 <h1>SkaOne Invoice</h1>
 
+<div id="produkContainer" class="grid"></div>
+
 <div class="cart">
-<input id="namaPelanggan" placeholder="Nama Pelanggan">
-<textarea id="alamatPelanggan" placeholder="Alamat Pelanggan"></textarea>
+
+<input id="namaPemesan" placeholder="Nama Pemesan">
+<textarea id="alamatPemesan" placeholder="Alamat"></textarea>
+<input id="jatuhTempo" type="date">
+<input id="job" placeholder="Job">
 
 <table>
 <thead>
@@ -189,9 +201,9 @@ button{
 <input id="uangMuka" type="number" placeholder="Uang Muka (DP)">
 <div>Sisa Tagihan: <b id="sisaTagihan">Rp 0</b></div>
 
-<button onclick="addSample()">Tambah Contoh Item</button>
 <button onclick="buatPreview()">PREVIEW INVOICE</button>
 <button onclick="downloadPDF()">DOWNLOAD PDF</button>
+
 </div>
 
 <div id="previewArea"></div>
@@ -205,15 +217,37 @@ button{
 const rupiah = n => "Rp " + (n || 0).toLocaleString("id-ID");
 
 let cart = {};
+let produkList = [];
 let invoiceCounter = 1;
 
-function addSample(){
-  const id = Date.now();
-  cart[id] = {
-    nama:"Paket Foto Wedding",
-    harga:1500000,
-    qty:1
-  };
+async function loadProduk(){
+  try{
+    const res = await fetch("barang.json");
+    produkList = await res.json();
+    renderProduk();
+  }catch(err){
+    alert("Gagal load barang.json. Jalankan via localhost!");
+  }
+}
+
+function renderProduk(){
+  const container = document.getElementById("produkContainer");
+  container.innerHTML = "";
+
+  produkList.forEach(p=>{
+    container.innerHTML += `
+      <div class="card" onclick="addCart(${p.id})">
+        ${p.nama}<br>
+        <span class="price">${rupiah(p.harga)}</span>
+      </div>
+    `;
+  });
+}
+
+function addCart(id){
+  const item = produkList.find(p=>p.id===id);
+  if(!cart[id]) cart[id] = {...item, qty:0};
+  cart[id].qty++;
   renderCart();
 }
 
@@ -236,10 +270,16 @@ function renderCart(){
   });
 
   document.getElementById("totalHarga").textContent = rupiah(total);
-
   const dp = +document.getElementById("uangMuka").value || 0;
+  document.getElementById("sisaTagihan").textContent = rupiah(total - dp);
+}
+
+function getStatus(total, dp){
   const sisa = total - dp;
-  document.getElementById("sisaTagihan").textContent = rupiah(sisa);
+
+  if(dp <= 0) return "Belum Dibayar";
+  if(sisa > 0) return "Belum Lunas (DP)";
+  return "Lunas";
 }
 
 function buatPreview(){
@@ -251,12 +291,15 @@ function buatPreview(){
   const dp = +document.getElementById("uangMuka").value || 0;
   const sisa = total - dp;
 
-  const nama = document.getElementById("namaPelanggan").value;
-  const alamat = document.getElementById("alamatPelanggan").value;
+  const nama = document.getElementById("namaPemesan").value;
+  const alamat = document.getElementById("alamatPemesan").value;
+  const jatuhTempo = document.getElementById("jatuhTempo").value;
+  const job = document.getElementById("job").value;
   const tanggal = new Date().toLocaleDateString("id-ID");
 
-  let rows = "";
+  const status = getStatus(total, dp);
 
+  let rows = "";
   items.forEach((i,index)=>{
     const sub = i.qty * i.harga;
     rows += `
@@ -269,16 +312,14 @@ function buatPreview(){
       </tr>`;
   });
 
-  const html = `
+  document.getElementById("previewArea").innerHTML = `
   <div class="preview-box" id="invoiceArea">
 
     <div class="invoice-top">
-
       <div>
         <div class="logo-area">
           <img src="logo.png">
         </div>
-
         <div class="company-text">
           Kalinampu, Seloharjo, Pundong, Bantul, Yogyakarta<br>
           0857-1213-0175
@@ -289,17 +330,15 @@ function buatPreview(){
         <h1>INVOICE</h1>
         Invoice #: INV-${new Date().getFullYear()}-${invoiceCounter}<br>
         Tanggal: ${tanggal}<br>
-        Jatuh Tempo: -<br>
-        Job: -<br><br>
-
+        Jatuh Tempo: ${jatuhTempo || "-"}<br>
+        Job: ${job || "-"}<br><br>
         Nama Pemesan: ${nama}<br>
         Alamat: ${alamat}
       </div>
-
     </div>
 
     <div class="status">
-      Status: ${sisa <= 0 ? "Lunas" : "Belum Bayar"}
+      Status: ${status}
     </div>
 
     <table class="invoice-table">
@@ -312,9 +351,7 @@ function buatPreview(){
           <th>Total Harga</th>
         </tr>
       </thead>
-      <tbody>
-        ${rows}
-      </tbody>
+      <tbody>${rows}</tbody>
     </table>
 
     <div class="summary">
@@ -339,10 +376,7 @@ function buatPreview(){
       </a>
     </div>
 
-  </div>
-  `;
-
-  document.getElementById("previewArea").innerHTML = html;
+  </div>`;
 }
 
 async function downloadPDF(){
@@ -354,7 +388,6 @@ async function downloadPDF(){
   const imgData = canvas.toDataURL("image/png");
 
   const doc = new jsPDF("p","mm","a4");
-
   const imgWidth = 190;
   const imgHeight = canvas.height * imgWidth / canvas.width;
 
@@ -363,6 +396,8 @@ async function downloadPDF(){
 
   invoiceCounter++;
 }
+
+document.addEventListener("DOMContentLoaded", loadProduk);
 </script>
 </body>
 </html>
