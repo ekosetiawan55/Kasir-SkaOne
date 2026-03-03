@@ -14,19 +14,20 @@ body{
     padding:0;
 }
 
-/* ===== A4 FIX ===== */
+/* ===== A4 EXACT SIZE (PX BASED) ===== */
+/* 794 x 1123 px = A4 portrait at 96dpi */
 .invoice-box{
-    width:210mm;
-    min-height:297mm;
-    padding:20mm;
-    margin:auto;
+    width:794px;
+    min-height:1123px;
+    padding:60px;
+    margin:40px auto;
     background:white;
     box-sizing:border-box;
 }
 
-/* ===== FORM SECTION ===== */
+/* ===== FORM ===== */
 .form-section{
-    width:210mm;
+    width:794px;
     margin:30px auto;
 }
 
@@ -47,7 +48,7 @@ button{
 }
 
 .header img{
-    width:200px;
+    width:180px;
 }
 
 table{
@@ -79,24 +80,19 @@ td{
 }
 
 .status{
-    margin-top:10px;
+    margin-top:15px;
     font-weight:bold;
 }
 
 .footer{
     text-align:center;
-    margin-top:60px;
+    margin-top:80px;
     font-size:14px;
-}
-
-.footer a{
-    color:blue;
 }
 </style>
 </head>
 <body>
 
-<!-- ===== INVOICE DI ATAS ===== -->
 <div class="invoice-box" id="invoice">
 
 <div class="header">
@@ -155,49 +151,40 @@ Status: <span id="previewStatus">Belum Dibayar</span>
 
 <div class="footer">
 <p>Abadikan moment istimewamu bersama SkaOne Photography</p>
-<a href="mailto:skaonephotography@gmail.com">skaonephotography@gmail.com</a>
+<p>skaonephotography@gmail.com</p>
 </div>
 
 </div>
 
-<!-- ===== FORM DI BAWAH ===== -->
+<!-- FORM -->
 <div class="form-section">
 
 <h3>Form Input</h3>
 
 Nomor Invoice:
 <input type="text" id="invoiceNumber">
-<button onclick="generateInvoice()">Auto</button>
-<br>
+<button onclick="generateInvoice()">Auto</button><br>
 
 Tanggal:
-<input type="date" id="tanggal">
-<br>
+<input type="date" id="tanggal"><br>
 
 Jatuh Tempo:
-<input type="date" id="jatuhTempo">
-<br>
+<input type="date" id="jatuhTempo"><br>
 
 Nama Pemesan:
-<input type="text" id="nama">
-<br>
+<input type="text" id="nama"><br>
 
 Alamat:
-<input type="text" id="alamat">
-<br>
+<input type="text" id="alamat"><br>
 
 Barang:
 <select id="barangSelect"></select>
 Jumlah:
 <input type="number" id="jumlah" value="1">
-<button onclick="tambahItem()">Tambah</button>
-
-<br><br>
+<button onclick="tambahItem()">Tambah</button><br><br>
 
 Uang Muka:
-<input type="number" id="dp" value="0">
-
-<br><br>
+<input type="number" id="dp" value="0"><br><br>
 
 <button onclick="downloadPDF()">Download PDF</button>
 
@@ -210,7 +197,6 @@ let items=[];
 fetch('barang.json')
 .then(res=>res.json())
 .then(data=>{
-    barangData=data;
     const select=document.getElementById('barangSelect');
     data.forEach(b=>{
         const opt=document.createElement('option');
@@ -231,7 +217,6 @@ function generateInvoice(){
     String(now.getSeconds()).padStart(2,'0');
     document.getElementById('invoiceNumber').value=code;
 }
-
 window.onload=generateInvoice;
 
 function tambahItem(){
@@ -241,12 +226,8 @@ function tambahItem(){
     const jumlah=parseInt(document.getElementById('jumlah').value);
 
     const existing=items.find(i=>i.nama===nama);
-
-    if(existing){
-        existing.jumlah+=jumlah;
-    }else{
-        items.push({nama,harga,jumlah});
-    }
+    if(existing){ existing.jumlah+=jumlah; }
+    else{ items.push({nama,harga,jumlah}); }
 
     renderTable();
 }
@@ -257,40 +238,29 @@ function renderTable(){
     let total=0;
 
     items.forEach((item,index)=>{
-        const tr=document.createElement('tr');
         const itemTotal=item.harga*item.jumlah;
         total+=itemTotal;
 
-        tr.innerHTML=`
+        tbody.innerHTML+=`
+        <tr>
         <td>${index+1}</td>
         <td>${item.nama}</td>
         <td>${item.jumlah}</td>
         <td class="right">Rp${item.harga.toLocaleString()}</td>
         <td class="right">Rp${itemTotal.toLocaleString()}</td>
-        `;
-        tbody.appendChild(tr);
+        </tr>`;
     });
 
     document.getElementById('subTotal').innerText="Rp"+total.toLocaleString();
-
     const dp=parseInt(document.getElementById('dp').value)||0;
     document.getElementById('dpPreview').innerText="Rp"+dp.toLocaleString();
+    document.getElementById('sisaTagihan').innerText="Rp"+(total-dp).toLocaleString();
 
-    const sisa=total-dp;
-    document.getElementById('sisaTagihan').innerText="Rp"+sisa.toLocaleString();
-
-    updateStatus(total,dp);
-    updatePreview();
-}
-
-function updateStatus(total,dp){
     let status="Belum Dibayar";
     if(dp>0 && dp<total) status="Belum Lunas (DP)";
     if(dp>=total && total>0) status="Lunas";
     document.getElementById('previewStatus').innerText=status;
-}
 
-function updatePreview(){
     document.getElementById('previewInvoice').innerText=document.getElementById('invoiceNumber').value;
     document.getElementById('previewTanggal').innerText=document.getElementById('tanggal').value;
     document.getElementById('previewJatuhTempo').innerText=document.getElementById('jatuhTempo').value;
@@ -303,19 +273,16 @@ document.querySelectorAll("input").forEach(i=>{
 });
 
 function downloadPDF(){
-    updatePreview();
-
     const element=document.getElementById('invoice');
 
-    const opt={
-        margin:0,
+    html2pdf().set({
+        margin:10,
         filename:'invoice.pdf',
         image:{ type:'jpeg', quality:1 },
-        html2canvas:{ scale:2 },
-        jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' }
-    };
-
-    html2pdf().set(opt).from(element).save();
+        html2canvas:{ scale:3, useCORS:true },
+        jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
+        pagebreak:{ mode:['avoid-all'] }
+    }).from(element).save();
 }
 </script>
 
