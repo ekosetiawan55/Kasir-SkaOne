@@ -11,44 +11,29 @@ body{
     font-family: Arial, sans-serif;
     background:#f2f2f2;
     margin:0;
-    padding:0;
 }
 
-/* ===== A4 EXACT SIZE (PX BASED) ===== */
-/* 794 x 1123 px = A4 portrait at 96dpi */
+/* A4 visual size */
 .invoice-box{
-    width:794px;
-    min-height:1123px;
-    padding:60px;
-    margin:40px auto;
+    width:210mm;
     background:white;
+    padding:20mm;
+    margin:30px auto;
     box-sizing:border-box;
 }
 
-/* ===== FORM ===== */
 .form-section{
-    width:794px;
+    width:210mm;
     margin:30px auto;
 }
 
-input, select{
-    padding:6px;
-    margin:4px 0;
-}
-
-button{
-    padding:8px 14px;
-    cursor:pointer;
-}
-
-/* ===== INVOICE STYLE ===== */
 .header{
     display:flex;
     justify-content:space-between;
 }
 
 .header img{
-    width:180px;
+    width:170px;
 }
 
 table{
@@ -86,8 +71,18 @@ td{
 
 .footer{
     text-align:center;
-    margin-top:80px;
+    margin-top:60px;
     font-size:14px;
+}
+
+input, select{
+    padding:6px;
+    margin:4px 0;
+}
+
+button{
+    padding:8px 14px;
+    cursor:pointer;
 }
 </style>
 </head>
@@ -156,7 +151,6 @@ Status: <span id="previewStatus">Belum Dibayar</span>
 
 </div>
 
-<!-- FORM -->
 <div class="form-section">
 
 <h3>Form Input</h3>
@@ -191,7 +185,6 @@ Uang Muka:
 </div>
 
 <script>
-let barangData=[];
 let items=[];
 
 fetch('barang.json')
@@ -240,7 +233,6 @@ function renderTable(){
     items.forEach((item,index)=>{
         const itemTotal=item.harga*item.jumlah;
         total+=itemTotal;
-
         tbody.innerHTML+=`
         <tr>
         <td>${index+1}</td>
@@ -251,8 +243,9 @@ function renderTable(){
         </tr>`;
     });
 
-    document.getElementById('subTotal').innerText="Rp"+total.toLocaleString();
     const dp=parseInt(document.getElementById('dp').value)||0;
+
+    document.getElementById('subTotal').innerText="Rp"+total.toLocaleString();
     document.getElementById('dpPreview').innerText="Rp"+dp.toLocaleString();
     document.getElementById('sisaTagihan').innerText="Rp"+(total-dp).toLocaleString();
 
@@ -275,13 +268,20 @@ document.querySelectorAll("input").forEach(i=>{
 function downloadPDF(){
     const element=document.getElementById('invoice');
 
+    const contentHeight = element.offsetHeight;
+    const a4HeightPx = 1122; // A4 height in px approx
+
+    let scale = 2;
+    if(contentHeight > a4HeightPx){
+        scale = (a4HeightPx / contentHeight) * 2;
+    }
+
     html2pdf().set({
-        margin:10,
+        margin:0,
         filename:'invoice.pdf',
         image:{ type:'jpeg', quality:1 },
-        html2canvas:{ scale:3, useCORS:true },
-        jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
-        pagebreak:{ mode:['avoid-all'] }
+        html2canvas:{ scale:scale, useCORS:true },
+        jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' }
     }).from(element).save();
 }
 </script>
