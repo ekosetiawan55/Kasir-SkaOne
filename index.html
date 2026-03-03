@@ -185,7 +185,7 @@ Uang Muka:
 
 </div>
 
-<script>
+    <script>
 let items=[];
 
 fetch('barang.json')
@@ -220,8 +220,11 @@ function tambahItem(){
     const jumlah=parseInt(document.getElementById('jumlah').value);
 
     const existing=items.find(i=>i.nama===nama);
-    if(existing){ existing.jumlah+=jumlah; }
-    else{ items.push({nama,harga,jumlah}); }
+    if(existing){ 
+        existing.jumlah+=jumlah; 
+    }else{ 
+        items.push({nama,harga,jumlah}); 
+    }
 
     renderTable();
 }
@@ -234,6 +237,7 @@ function renderTable(){
     items.forEach((item,index)=>{
         const itemTotal=item.harga*item.jumlah;
         total+=itemTotal;
+
         tbody.innerHTML+=`
         <tr>
         <td>${index+1}</td>
@@ -244,7 +248,10 @@ function renderTable(){
         </tr>`;
     });
 
-    const dp=parseInt(document.getElementById('dp').value)||0;
+    /* ===== PERBAIKAN DP ===== */
+    const dpInput=document.getElementById('dp').value.replace(/\D/g,'');
+    const dp=parseInt(dpInput) || 0;
+    /* ========================= */
 
     document.getElementById('subTotal').innerText="Rp"+total.toLocaleString();
     document.getElementById('dpPreview').innerText="Rp"+dp.toLocaleString();
@@ -255,6 +262,10 @@ function renderTable(){
     if(dp>=total && total>0) status="Lunas";
     document.getElementById('previewStatus').innerText=status;
 
+    updatePreview();
+}
+
+function updatePreview(){
     document.getElementById('previewInvoice').innerText=document.getElementById('invoiceNumber').value;
     document.getElementById('previewTanggal').innerText=document.getElementById('tanggal').value;
     document.getElementById('previewJatuhTempo').innerText=document.getElementById('jatuhTempo').value;
@@ -262,6 +273,32 @@ function renderTable(){
     document.getElementById('previewAlamat').innerText=document.getElementById('alamat').value;
 }
 
+/* ===== FORMAT RIBUAN + VALIDASI DP ===== */
+document.getElementById('dp').addEventListener('input', function(e){
+
+    let value = e.target.value.replace(/\D/g,'');
+
+    let subtotalText = document.getElementById('subTotal').innerText.replace(/\D/g,'');
+    let subtotal = parseInt(subtotalText) || 0;
+
+    let dp = parseInt(value) || 0;
+
+    if(dp > subtotal){
+        dp = subtotal;
+    }
+
+    e.target.value = dp.toLocaleString('id-ID');
+
+    renderTable();
+});
+/* ======================================== */
+
+document.getElementById('tanggal').addEventListener('input', renderTable);
+document.getElementById('jatuhTempo').addEventListener('input', renderTable);
+document.getElementById('nama').addEventListener('input', renderTable);
+document.getElementById('alamat').addEventListener('input', renderTable);
+
+/* ===== PDF ===== */
 async function downloadPDF(){
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p','mm','a4');
@@ -269,19 +306,15 @@ async function downloadPDF(){
     const element = document.getElementById('invoice');
 
     const canvas = await html2canvas(element, { scale:2, useCORS:true });
-
     const imgData = canvas.toDataURL('image/png');
 
     const imgWidth = 210;
-    const pageHeight = 297;
-
     const imgHeight = canvas.height * imgWidth / canvas.width;
 
     pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight);
-
     pdf.save('invoice.pdf');
 }
 </script>
-
+    
 </body>
 </html>
