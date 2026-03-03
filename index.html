@@ -12,9 +12,14 @@ body{
     background:#f2f2f2;
 }
 
-.container{
-    width:1000px;
+/* A4 SIZE FIX */
+.invoice-box{
+    width:210mm;
+    min-height:297mm;
+    padding:20mm;
     margin:auto;
+    background:white;
+    box-sizing:border-box;
 }
 
 input, select{
@@ -27,30 +32,20 @@ button{
     cursor:pointer;
 }
 
-.invoice-box{
-    width:100%;
-    background:white;
-    padding:30px;
-    margin-top:20px;
-}
-
 .header{
     display:flex;
     justify-content:space-between;
 }
 
 .header img{
-    width:220px;
-}
-
-.center{
-    text-align:center;
+    width:200px;
 }
 
 table{
     width:100%;
     border-collapse:collapse;
     margin-top:20px;
+    font-size:14px;
 }
 
 th{
@@ -69,7 +64,7 @@ td{
 }
 
 .total-table{
-    width:40%;
+    width:45%;
     margin-left:auto;
     margin-top:20px;
 }
@@ -81,7 +76,7 @@ td{
 
 .footer{
     text-align:center;
-    margin-top:50px;
+    margin-top:60px;
     font-size:14px;
 }
 
@@ -91,8 +86,6 @@ td{
 </style>
 </head>
 <body>
-
-<div class="container">
 
 <h2>Form Input</h2>
 
@@ -200,7 +193,6 @@ Status: <span id="previewStatus">Belum Dibayar</span>
 </div>
 
 </div>
-</div>
 
 <script>
 let barangData=[];
@@ -304,8 +296,18 @@ document.querySelectorAll("input").forEach(i=>{
 
 function downloadPDF(){
     updatePreview();
+
     const element=document.getElementById('invoice');
-    html2pdf().from(element).save('invoice.pdf');
+
+    const opt={
+        margin:0,
+        filename:'invoice.pdf',
+        image:{ type:'jpeg', quality:1 },
+        html2canvas:{ scale:2 },
+        jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
 }
 </script>
 
