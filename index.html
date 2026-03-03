@@ -1,329 +1,313 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SkaOne Invoice</title>
+<title>Invoice SkaOne</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <style>
-/* STYLE TIDAK DIUBAH */
 body{
-  margin:0;
-  font-family:Arial, sans-serif;
-  background:#0f172a;
-  color:#fff;
-}
-.container{
-  max-width:1100px;
-  margin:auto;
-  padding:20px;
-}
-h1{ margin-bottom:20px; }
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-  gap:15px;
-  margin-bottom:25px;
-}
-.card{
-  background:#1f2937;
-  padding:15px;
-  border-radius:10px;
-  cursor:pointer;
-  text-align:center;
-  transition:.2s;
-}
-.card:hover{ background:#374151; }
-.price{ color:#f59e0b; font-weight:bold }
-.cart{
-  background:#111827;
-  padding:20px;
-  border-radius:12px;
-}
-input, textarea{
-  width:100%;
-  padding:8px;
-  margin-bottom:8px;
-  border-radius:6px;
-  border:none;
-}
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:10px;
-}
-th,td{
-  padding:8px;
-  border-bottom:1px solid #374151;
-}
-th{ background:#1f2937 }
-.text-right{ text-align:right; }
-button{
-  padding:10px 16px;
-  border:none;
-  border-radius:6px;
-  background:#2563eb;
-  color:#fff;
-  font-weight:bold;
-  cursor:pointer;
-  margin-top:12px;
-  margin-right:10px;
+    font-family: Arial, sans-serif;
+    background:#f2f2f2;
 }
 
-/* INVOICE STYLE TIDAK DIUBAH */
-.preview-box{
-  background:#fff;
-  color:#000;
-  padding:40px;
-  margin-top:30px;
-  width:800px;
-  margin-left:auto;
-  margin-right:auto;
-  font-family:Times New Roman, serif;
+.container{
+    width:1000px;
+    margin:auto;
 }
-.invoice-top{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
+
+input, select{
+    padding:6px;
+    margin:4px 0;
 }
-.logo-area img{ width:140px; }
-.company-text{ font-size:13px; line-height:1.5; }
-.invoice-right{ text-align:right; font-size:14px; }
-.invoice-right h1{ margin:0; font-size:32px; }
-.status{ margin:15px 0; font-weight:bold; font-size:15px; }
-.invoice-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:15px;
+
+button{
+    padding:8px 14px;
+    cursor:pointer;
 }
-.invoice-table th{
-  background:#555;
-  color:#fff;
-  padding:8px;
-  font-weight:normal;
+
+.invoice-box{
+    width:100%;
+    background:white;
+    padding:30px;
+    margin-top:20px;
 }
-.invoice-table td{
-  padding:8px;
-  border-bottom:1px solid #ccc;
+
+.header{
+    display:flex;
+    justify-content:space-between;
 }
-.summary{
-  width:300px;
-  margin-left:auto;
-  margin-top:20px;
+
+.header img{
+    width:220px;
 }
-.summary-row{
-  display:flex;
-  justify-content:space-between;
-  padding:5px 0;
+
+.center{
+    text-align:center;
 }
-.summary-total{
-  background:#eee;
-  padding:6px;
-  font-weight:bold;
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
 }
-.footer-note{
-  margin-top:35px;
-  text-align:center;
-  font-size:14px;
+
+th{
+    background:#444;
+    color:white;
+    padding:8px;
 }
-.footer-note a{
-  color:#1d4ed8;
-  text-decoration:none;
+
+td{
+    padding:8px;
+    border-bottom:1px solid #ddd;
+}
+
+.right{
+    text-align:right;
+}
+
+.total-table{
+    width:40%;
+    margin-left:auto;
+    margin-top:20px;
+}
+
+.status{
+    margin-top:10px;
+    font-weight:bold;
+}
+
+.footer{
+    text-align:center;
+    margin-top:50px;
+    font-size:14px;
+}
+
+.footer a{
+    color:blue;
 }
 </style>
 </head>
-
 <body>
+
 <div class="container">
 
-<h1>SkaOne Invoice</h1>
+<h2>Form Input</h2>
 
-<div id="produkContainer" class="grid"></div>
+Nomor Invoice:
+<input type="text" id="invoiceNumber">
+<button onclick="generateInvoice()">Auto</button>
+<br>
 
-<div class="cart">
+Tanggal:
+<input type="date" id="tanggal">
+<br>
 
-<!-- PERUBAHAN DI SINI -->
-<div style="display:flex; gap:10px;">
-  <input id="nomorInvoice" placeholder="Nomor Invoice (Manual)">
-  <button type="button" onclick="generateInvoice()">AUTO</button>
+Jatuh Tempo:
+<input type="date" id="jatuhTempo">
+<br>
+
+Job:
+<input type="text" id="job">
+<br>
+
+Nama Pemesan:
+<input type="text" id="nama">
+<br>
+
+Alamat:
+<input type="text" id="alamat">
+<br>
+
+Barang:
+<select id="barangSelect"></select>
+Jumlah:
+<input type="number" id="jumlah" value="1">
+<button onclick="tambahItem()">Tambah</button>
+
+<br><br>
+
+Uang Muka:
+<input type="number" id="dp" value="0">
+
+<br><br>
+
+<button onclick="downloadPDF()">Download PDF</button>
+
+<!-- INVOICE -->
+<div class="invoice-box" id="invoice">
+
+<div class="header">
+<div>
+<img src="logo.png">
+<p>Kalinampu, Seloharjo, Pundong, Bantul, Yogyakarta<br>
+📞 0857-1213-0175</p>
 </div>
 
-<input id="namaPemesan" placeholder="Nama Pemesan">
-<textarea id="alamatPemesan" placeholder="Alamat"></textarea>
-<input id="jatuhTempo" type="date">
-<input id="job" placeholder="Job">
+<div>
+<h1>INVOICE</h1>
+<p>
+Invoice #: <span id="previewInvoice"></span><br>
+Tanggal: <span id="previewTanggal"></span><br>
+Jatuh Tempo: <span id="previewJatuhTempo"></span><br>
+Job: <span id="previewJob"></span>
+</p>
+</div>
+</div>
+
+<div class="status">
+Status: <span id="previewStatus">Belum Dibayar</span>
+</div>
+
+<p>
+<b>Nama Pemesan:</b> <span id="previewNama"></span><br>
+<b>Alamat:</b> <span id="previewAlamat"></span>
+</p>
 
 <table>
 <thead>
 <tr>
-<th>Barang</th>
-<th class="text-right">Harga</th>
-<th>Qty</th>
-<th class="text-right">Subtotal</th>
+<th>No</th>
+<th>Deskripsi</th>
+<th>Jumlah</th>
+<th class="right">Harga</th>
+<th class="right">Total Harga</th>
 </tr>
 </thead>
-<tbody id="cartBody"></tbody>
+<tbody id="itemTable"></tbody>
 </table>
 
-<h3 class="text-right">Total: <span id="totalHarga">Rp 0</span></h3>
+<table class="total-table">
+<tr>
+<td>Sub Total</td>
+<td class="right" id="subTotal">Rp0</td>
+</tr>
+<tr>
+<td>Uang Muka</td>
+<td class="right" id="dpPreview">Rp0</td>
+</tr>
+<tr>
+<td><b>Total Sisa Tagihan</b></td>
+<td class="right"><b id="sisaTagihan">Rp0</b></td>
+</tr>
+</table>
 
-<!-- REAL TIME UPDATE -->
-<input id="uangMuka" type="number" placeholder="Uang Muka (DP)" oninput="updateSisa()">
-<div class="text-right">Sisa Tagihan: <b id="sisaTagihan">Rp 0</b></div>
-
-<button onclick="buatPreview()">PREVIEW INVOICE</button>
-<button onclick="downloadPDF()">DOWNLOAD PDF</button>
-
+<div class="footer">
+<p>Abadikan moment istimewamu bersama SkaOne Photography</p>
+<a href="mailto:skaonephotography@gmail.com">skaonephotography@gmail.com</a>
 </div>
 
-<div id="previewArea"></div>
 </div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</div>
 
 <script>
-const rupiah = n => "Rp " + (n || 0).toLocaleString("id-ID");
+let barangData=[];
+let items=[];
 
-let cart = {};
-let produkList = [];
+fetch('barang.json')
+.then(res=>res.json())
+.then(data=>{
+    barangData=data;
+    const select=document.getElementById('barangSelect');
+    data.forEach(b=>{
+        const opt=document.createElement('option');
+        opt.value=b.harga;
+        opt.text=b.nama + " - Rp" + b.harga.toLocaleString();
+        select.appendChild(opt);
+    });
+});
 
-async function loadProduk(){
-  try{
-    const res = await fetch("barang.json");
-    produkList = await res.json();
-    renderProduk();
-  }catch(err){
-    alert("Gagal load barang.json. Jalankan via localhost!");
-  }
-}
-
-function renderProduk(){
-  const container = document.getElementById("produkContainer");
-  container.innerHTML = "";
-  produkList.forEach(p=>{
-    container.innerHTML += `
-      <div class="card" onclick="addCart(${p.id})">
-        ${p.nama}<br>
-        <span class="price">${rupiah(p.harga)}</span>
-      </div>
-    `;
-  });
-}
-
-function addCart(id){
-  const item = produkList.find(p=>p.id===id);
-  if(!cart[id]) cart[id] = {...item, qty:0};
-  cart[id].qty++;
-  renderCart();
-}
-
-function renderCart(){
-  const body = document.getElementById("cartBody");
-  body.innerHTML = "";
-  let total = 0;
-
-  Object.values(cart).forEach(i=>{
-    const sub = i.qty * i.harga;
-    total += sub;
-    body.innerHTML += `
-      <tr>
-        <td>${i.nama}</td>
-        <td class="text-right">${rupiah(i.harga)}</td>
-        <td>${i.qty}</td>
-        <td class="text-right">${rupiah(sub)}</td>
-      </tr>`;
-  });
-
-  document.getElementById("totalHarga").textContent = rupiah(total);
-  updateSisa();
-}
-
-/* REAL TIME SISA */
-function updateSisa(){
-  const totalText = document.getElementById("totalHarga").textContent.replace(/\D/g,"");
-  const total = parseInt(totalText) || 0;
-  const dp = parseInt(document.getElementById("uangMuka").value) || 0;
-  document.getElementById("sisaTagihan").textContent = rupiah(total - dp);
-}
-
-/* AUTO NOMOR INVOICE */
 function generateInvoice(){
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth()+1).padStart(2,'0');
-  const dd = String(now.getDate()).padStart(2,'0');
-  const HH = String(now.getHours()).padStart(2,'0');
-  const MM = String(now.getMinutes()).padStart(2,'0');
-  const SS = String(now.getSeconds()).padStart(2,'0');
-
-  const kode = `SKA${yyyy}${mm}${dd}${HH}${MM}${SS}`;
-  document.getElementById("nomorInvoice").value = kode;
+    const now=new Date();
+    const code="SKA"+
+    now.getFullYear()+
+    String(now.getMonth()+1).padStart(2,'0')+
+    String(now.getDate()).padStart(2,'0')+
+    String(now.getHours()).padStart(2,'0')+
+    String(now.getMinutes()).padStart(2,'0')+
+    String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('invoiceNumber').value=code;
 }
 
-/* FUNCTION LAIN TIDAK DIUBAH */
-function getStatus(total, dp){
-  const sisa = total - dp;
-  if(dp <= 0) return "Belum Dibayar";
-  if(sisa > 0) return "Belum Lunas (DP)";
-  return "Lunas";
+window.onload=generateInvoice;
+
+function tambahItem(){
+    const select=document.getElementById('barangSelect');
+    const nama=select.options[select.selectedIndex].text.split(" - ")[0];
+    const harga=parseInt(select.value);
+    const jumlah=parseInt(document.getElementById('jumlah').value);
+
+    const existing=items.find(i=>i.nama===nama);
+
+    if(existing){
+        existing.jumlah+=jumlah;
+    }else{
+        items.push({nama,harga,jumlah});
+    }
+
+    renderTable();
 }
 
-function buatPreview(){
-  const items = Object.values(cart);
-  if(!items.length) return alert("Belum ada transaksi!");
+function renderTable(){
+    const tbody=document.getElementById('itemTable');
+    tbody.innerHTML='';
+    let total=0;
 
-  const total = items.reduce((a,b)=>a+b.qty*b.harga,0);
-  const dp = +document.getElementById("uangMuka").value || 0;
-  const sisa = total - dp;
+    items.forEach((item,index)=>{
+        const tr=document.createElement('tr');
+        const itemTotal=item.harga*item.jumlah;
+        total+=itemTotal;
 
-  const nomorInvoice = document.getElementById("nomorInvoice").value || "-";
-  const nama = document.getElementById("namaPemesan").value;
-  const alamat = document.getElementById("alamatPemesan").value;
-  const jatuhTempo = document.getElementById("jatuhTempo").value;
-  const job = document.getElementById("job").value;
-  const tanggal = new Date().toLocaleDateString("id-ID");
-
-  const status = getStatus(total, dp);
-
-  let rows = "";
-  items.forEach((i,index)=>{
-    const sub = i.qty * i.harga;
-    rows += `
-      <tr>
+        tr.innerHTML=`
         <td>${index+1}</td>
-        <td>${i.nama}</td>
-        <td>${i.qty}</td>
-        <td class="text-right">${rupiah(i.harga)}</td>
-        <td class="text-right">${rupiah(sub)}</td>
-      </tr>`;
-  });
+        <td>${item.nama}</td>
+        <td>${item.jumlah}</td>
+        <td class="right">Rp${item.harga.toLocaleString()}</td>
+        <td class="right">Rp${itemTotal.toLocaleString()}</td>
+        `;
+        tbody.appendChild(tr);
+    });
 
-  document.getElementById("previewArea").innerHTML = `
-  <div class="preview-box" id="invoiceArea">
-    <div class="invoice-right">
-      <h1>INVOICE</h1>
-      Invoice #: ${nomorInvoice}<br>
-      Tanggal: ${tanggal}
-    </div>
-  </div>`;
+    document.getElementById('subTotal').innerText="Rp"+total.toLocaleString();
+
+    const dp=parseInt(document.getElementById('dp').value)||0;
+    document.getElementById('dpPreview').innerText="Rp"+dp.toLocaleString();
+
+    const sisa=total-dp;
+    document.getElementById('sisaTagihan').innerText="Rp"+sisa.toLocaleString();
+
+    updateStatus(total,dp);
+    updatePreview();
 }
 
-async function downloadPDF(){
-  const { jsPDF } = window.jspdf;
-  const invoice = document.getElementById("invoiceArea");
-  if(!invoice) return alert("Klik PREVIEW dulu!");
-
-  const canvas = await html2canvas(invoice,{ scale:2 });
-  const imgData = canvas.toDataURL("image/png");
-  const doc = new jsPDF("p","mm","a4");
-  const imgWidth = 190;
-  const imgHeight = canvas.height * imgWidth / canvas.width;
-  doc.addImage(imgData,"PNG",10,10,imgWidth,imgHeight);
-  doc.save("Invoice-"+Date.now()+".pdf");
+function updateStatus(total,dp){
+    let status="Belum Dibayar";
+    if(dp>0 && dp<total) status="Belum Lunas (DP)";
+    if(dp>=total && total>0) status="Lunas";
+    document.getElementById('previewStatus').innerText=status;
 }
 
-document.addEventListener("DOMContentLoaded", loadProduk);
+function updatePreview(){
+    document.getElementById('previewInvoice').innerText=document.getElementById('invoiceNumber').value;
+    document.getElementById('previewTanggal').innerText=document.getElementById('tanggal').value;
+    document.getElementById('previewJatuhTempo').innerText=document.getElementById('jatuhTempo').value;
+    document.getElementById('previewJob').innerText=document.getElementById('job').value;
+    document.getElementById('previewNama').innerText=document.getElementById('nama').value;
+    document.getElementById('previewAlamat').innerText=document.getElementById('alamat').value;
+}
+
+document.querySelectorAll("input").forEach(i=>{
+    i.addEventListener("input",renderTable);
+});
+
+function downloadPDF(){
+    updatePreview();
+    const element=document.getElementById('invoice');
+    html2pdf().from(element).save('invoice.pdf');
+}
 </script>
+
 </body>
 </html>
