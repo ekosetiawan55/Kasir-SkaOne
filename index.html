@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <title>Invoice SkaOne Photography</title>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
 body{
     font-family: Arial, sans-serif;
@@ -13,6 +16,8 @@ body{
 .container{
     max-width:900px;
     margin:auto;
+}
+.card{
     background:white;
     padding:30px;
     box-shadow:0 0 10px rgba(0,0,0,0.1);
@@ -74,11 +79,23 @@ button{
     padding:8px 12px;
     cursor:pointer;
 }
+.action-buttons{
+    margin-bottom:20px;
+    display:flex;
+    gap:10px;
+}
 </style>
 </head>
 
 <body>
 <div class="container">
+
+<div class="action-buttons">
+    <button onclick="previewPDF()">Preview PDF</button>
+    <button onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div class="card" id="invoiceArea">
 
 <div class="header">
     <img src="logo.png" class="logo">
@@ -125,18 +142,7 @@ button{
     <th>Total</th>
 </tr>
 </thead>
-<tbody id="itemTable">
-<tr>
-    <td>
-        <select onchange="updateHarga(this)">
-            <option value="">Pilih Barang</option>
-        </select>
-    </td>
-    <td class="text-right harga">0</td>
-    <td><input type="number" value="1" min="1" onchange="hitungTotal()"></td>
-    <td class="text-right total">0</td>
-</tr>
-</tbody>
+<tbody id="itemTable"></tbody>
 </table>
 
 <br>
@@ -171,6 +177,7 @@ button{
 </div>
 
 </div>
+</div>
 
 <script>
 let daftarBarang = [];
@@ -179,33 +186,32 @@ fetch('barang.json')
 .then(res => res.json())
 .then(data => {
     daftarBarang = data;
-    isiDropdown();
+    tambahBaris();
 });
-
-function isiDropdown(){
-    const selects = document.querySelectorAll("select");
-    selects.forEach(select => {
-        daftarBarang.forEach(item=>{
-            const option = document.createElement("option");
-            option.value = item.harga;
-            option.textContent = item.nama;
-            select.appendChild(option);
-        });
-    });
-}
 
 function tambahBaris(){
     const table = document.getElementById("itemTable");
-    const row = table.rows[0].cloneNode(true);
-    row.querySelector(".harga").innerText = "0";
-    row.querySelector(".total").innerText = "0";
-    row.querySelector("input").value = 1;
+    const row = document.createElement("tr");
+
+    row.innerHTML = `
+        <td>
+            <select onchange="updateHarga(this)">
+                <option value="">Pilih Barang</option>
+                ${daftarBarang.map(item => 
+                    `<option value="${item.harga}">${item.nama}</option>`
+                ).join('')}
+            </select>
+        </td>
+        <td class="text-right harga">Rp 0</td>
+        <td><input type="number" value="1" min="1" onchange="hitungTotal()"></td>
+        <td class="text-right total">Rp 0</td>
+    `;
+
     table.appendChild(row);
-    isiDropdown();
 }
 
 function updateHarga(select){
-    const harga = select.value;
+    const harga = parseInt(select.value) || 0;
     const row = select.closest("tr");
     row.querySelector(".harga").innerText = formatRupiah(harga);
     hitungTotal();
@@ -235,7 +241,9 @@ function hitungStatus(){
     document.getElementById("sisa").value = formatRupiah(sisa);
 
     let status = "";
-    if(dp === 0){
+    if(subtotal === 0){
+        status = "";
+    } else if(dp === 0){
         status = "Belum Dibayar";
     } else if(dp < subtotal){
         status = "Belum Lunas (DP)";
@@ -258,13 +266,32 @@ function generateInvoice(){
     const HH = String(now.getHours()).padStart(2,'0');
     const MM = String(now.getMinutes()).padStart(2,'0');
     const SS = String(now.getSeconds()).padStart(2,'0');
-
     const kode = `SKA${yyyy}${mm}${dd}${HH}${MM}${SS}`;
     document.getElementById("invoiceNumber").value = kode;
 }
 
 window.onload = function(){
     generateInvoice();
+}
+
+async function previewPDF(){
+    const canvas = await html2canvas(document.getElementById("invoiceArea"));
+    const imgData = canvas.toDataURL("image/png");
+    const previewWindow = window.open("");
+    previewWindow.document.write(`<img src="${imgData}" style="width:100%">`);
+}
+
+async function downloadPDF(){
+    const { jsPDF } = window.jspdf;
+    const canvas = await html2canvas(document.getElementById("invoiceArea"));
+    const imgData = canvas.toDataURL("image/png");
+
+    const pdf = new jsPDF('p','mm','a4');
+    const width = 210;
+    const height = canvas.height * width / canvas.width;
+
+    pdf.addImage(imgData,'PNG',0,0,width,height);
+    pdf.save("invoice.pdf");
 }
 </script>
 
