@@ -10,9 +10,11 @@
 body{
     font-family: Arial, sans-serif;
     background:#f2f2f2;
+    margin:0;
+    padding:0;
 }
 
-/* A4 SIZE FIX */
+/* ===== A4 FIX ===== */
 .invoice-box{
     width:210mm;
     min-height:297mm;
@@ -20,6 +22,12 @@ body{
     margin:auto;
     background:white;
     box-sizing:border-box;
+}
+
+/* ===== FORM SECTION ===== */
+.form-section{
+    width:210mm;
+    margin:30px auto;
 }
 
 input, select{
@@ -32,6 +40,7 @@ button{
     cursor:pointer;
 }
 
+/* ===== INVOICE STYLE ===== */
 .header{
     display:flex;
     justify-content:space-between;
@@ -87,49 +96,7 @@ td{
 </head>
 <body>
 
-<h2>Form Input</h2>
-
-Nomor Invoice:
-<input type="text" id="invoiceNumber">
-<button onclick="generateInvoice()">Auto</button>
-<br>
-
-Tanggal:
-<input type="date" id="tanggal">
-<br>
-
-Jatuh Tempo:
-<input type="date" id="jatuhTempo">
-<br>
-
-Job:
-<input type="text" id="job">
-<br>
-
-Nama Pemesan:
-<input type="text" id="nama">
-<br>
-
-Alamat:
-<input type="text" id="alamat">
-<br>
-
-Barang:
-<select id="barangSelect"></select>
-Jumlah:
-<input type="number" id="jumlah" value="1">
-<button onclick="tambahItem()">Tambah</button>
-
-<br><br>
-
-Uang Muka:
-<input type="number" id="dp" value="0">
-
-<br><br>
-
-<button onclick="downloadPDF()">Download PDF</button>
-
-<!-- INVOICE -->
+<!-- ===== INVOICE DI ATAS ===== -->
 <div class="invoice-box" id="invoice">
 
 <div class="header">
@@ -144,8 +111,7 @@ Uang Muka:
 <p>
 Invoice #: <span id="previewInvoice"></span><br>
 Tanggal: <span id="previewTanggal"></span><br>
-Jatuh Tempo: <span id="previewJatuhTempo"></span><br>
-Job: <span id="previewJob"></span>
+Jatuh Tempo: <span id="previewJatuhTempo"></span>
 </p>
 </div>
 </div>
@@ -191,6 +157,49 @@ Status: <span id="previewStatus">Belum Dibayar</span>
 <p>Abadikan moment istimewamu bersama SkaOne Photography</p>
 <a href="mailto:skaonephotography@gmail.com">skaonephotography@gmail.com</a>
 </div>
+
+</div>
+
+<!-- ===== FORM DI BAWAH ===== -->
+<div class="form-section">
+
+<h3>Form Input</h3>
+
+Nomor Invoice:
+<input type="text" id="invoiceNumber">
+<button onclick="generateInvoice()">Auto</button>
+<br>
+
+Tanggal:
+<input type="date" id="tanggal">
+<br>
+
+Jatuh Tempo:
+<input type="date" id="jatuhTempo">
+<br>
+
+Nama Pemesan:
+<input type="text" id="nama">
+<br>
+
+Alamat:
+<input type="text" id="alamat">
+<br>
+
+Barang:
+<select id="barangSelect"></select>
+Jumlah:
+<input type="number" id="jumlah" value="1">
+<button onclick="tambahItem()">Tambah</button>
+
+<br><br>
+
+Uang Muka:
+<input type="number" id="dp" value="0">
+
+<br><br>
+
+<button onclick="downloadPDF()">Download PDF</button>
 
 </div>
 
@@ -285,7 +294,6 @@ function updatePreview(){
     document.getElementById('previewInvoice').innerText=document.getElementById('invoiceNumber').value;
     document.getElementById('previewTanggal').innerText=document.getElementById('tanggal').value;
     document.getElementById('previewJatuhTempo').innerText=document.getElementById('jatuhTempo').value;
-    document.getElementById('previewJob').innerText=document.getElementById('job').value;
     document.getElementById('previewNama').innerText=document.getElementById('nama').value;
     document.getElementById('previewAlamat').innerText=document.getElementById('alamat').value;
 }
