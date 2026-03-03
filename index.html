@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasir PRO</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#0f172a;
+  color:#fff;
+}
+
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:20px;
+}
+
+h1{
+  margin-bottom:20px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:15px;
+}
+
+.card{
+  background:#1f2937;
+  padding:15px;
+  border-radius:10px;
+  cursor:pointer;
+  text-align:center;
+  transition:.2s;
+}
+.card:hover{ background:#374151; }
+
+.price{ color:#f59e0b; font-weight:bold }
+
+.cart{
+  background:#111827;
+  padding:20px;
+  border-radius:12px;
+  margin-top:25px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+
+th,td{
+  padding:8px;
+  border-bottom:1px solid #374151;
+}
+
+th{ background:#1f2937 }
+
+button{
+  padding:10px 16px;
+  border:none;
+  border-radius:6px;
+  background:#2563eb;
+  color:#fff;
+  font-weight:bold;
+  cursor:pointer;
+  margin-top:12px;
+  margin-right:10px;
+}
+
+.preview-box{
+  background:#fff;
+  color:#000;
+  padding:30px;
+  margin-top:30px;
+  border-radius:10px;
+}
+
+.invoice-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.invoice-header img{
+  width:90px;
+}
+
+.company-info{
+  font-size:14px;
+}
+
+.invoice-title{
+  text-align:right;
+}
+
+.invoice-title h2{
+  margin:0;
+  font-size:26px;
+}
+
+.total-box{
+  margin-top:20px;
+  text-align:right;
+}
+
+.footer-note{
+  margin-top:40px;
+  text-align:center;
+  font-size:13px;
+  color:#555;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>SkaOne Invoice</h1>
+
+<div id="barangKasir" class="grid"></div>
+
+<div class="cart">
+<input id="namaPelanggan" placeholder="Nama Pelanggan">
+<textarea id="alamatPelanggan" placeholder="Alamat Pelanggan"></textarea>
+
+<table>
+<thead>
+<tr>
+<th>Barang</th>
+<th>Harga</th>
+<th>Qty</th>
+<th>Subtotal</th>
+</tr>
+</thead>
+<tbody id="cartBody"></tbody>
+</table>
+
+<h3>Total: <span id="totalHarga">Rp 0</span></h3>
+
+<input id="uangMuka" type="number" placeholder="Uang Muka (DP)">
+<div>Sisa Tagihan: <b id="sisaTagihan">Rp 0</b></div>
+
+<button onclick="buatPreview()">PREVIEW INVOICE</button>
+<button onclick="downloadPDF()">DOWNLOAD PDF</button>
+</div>
+
+<div id="previewArea"></div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+const rupiah = n => "Rp " + (n || 0).toLocaleString("id-ID");
+
+let cart = {};
+let invoiceCounter = 1;
+
+async function getBarang(){
+  const res = await fetch("barang.json");
+  return await res.json();
+}
+
+async function renderBarang(){
+  const list = await getBarang();
+  const container = document.getElementById("barangKasir");
+  container.innerHTML = "";
+
+  list.forEach(b=>{
+    container.innerHTML += `
+      <div class="card" onclick="addCart(${b.id})">
+        ${b.nama}<br>
+        <span class="price">${rupiah(b.harga)}</span>
+      </div>`;
+  });
+}
+
+async function addCart(id){
+  const list = await getBarang();
+  const b = list.find(x=>x.id===id);
+
+  if(!cart[id]) cart[id] = {...b, qty:0};
+  cart[id].qty++;
+
+  renderCart();
+}
+
+function renderCart(){
+  const body = document.getElementById("cartBody");
+  body.innerHTML = "";
+  let total = 0;
+
+  Object.values(cart).forEach(i=>{
+    const sub = i.qty * i.harga;
+    total += sub;
+
+    body.innerHTML += `
+      <tr>
+        <td>${i.nama}</td>
+        <td>${rupiah(i.harga)}</td>
+        <td>${i.qty}</td>
+        <td>${rupiah(sub)}</td>
+      </tr>`;
+  });
+
+  document.getElementById("totalHarga").textContent = rupiah(total);
+
+  const dp = +document.getElementById("uangMuka").value || 0;
+  const sisa = total - dp;
+
+  document.getElementById("sisaTagihan").textContent = rupiah(sisa);
+}
+
+function buatPreview(){
+  const items = Object.values(cart);
+  if(!items.length) return alert("Belum ada transaksi!");
+
+  const total = items.reduce((a,b)=>a+b.qty*b.harga,0);
+  const dp = +document.getElementById("uangMuka").value || 0;
+  const sisa = total - dp;
+
+  const nama = document.getElementById("namaPelanggan").value;
+  const alamat = document.getElementById("alamatPelanggan").value;
+
+  let html = `
+  <div class="preview-box" id="invoiceArea">
+
+    <div class="invoice-header">
+      <div style="display:flex; gap:15px; align-items:Left;">
+        <img src="Logo.png">
+        <div class="company-info">
+          Kalinampu, Seloharjo, Pundong, Bantul<br>
+          +62 857-1213-0175
+        </div>
+      </div>
+
+      <div class="invoice-title">
+        <h2>INVOICE</h2>
+        No: INV-${invoiceCounter}
+      </div>
+    </div>
+
+    <hr>
+
+    <b>Pelanggan:</b> ${nama}<br>
+    <b>Alamat:</b> ${alamat}
+
+    <table style="margin-top:15px;">
+      <tr>
+        <th>Item</th>
+        <th>Qty</th>
+        <th>Harga</th>
+        <th>Total</th>
+      </tr>`;
+
+  items.forEach(i=>{
+    const sub = i.qty * i.harga;
+    html += `
+      <tr>
+        <td>${i.nama}</td>
+        <td>${i.qty}</td>
+        <td>${rupiah(i.harga)}</td>
+        <td>${rupiah(sub)}</td>
+      </tr>`;
+  });
+
+  html += `
+    </table>
+
+    <div class="total-box">
+      Total: ${rupiah(total)}<br>
+      DP: ${rupiah(dp)}<br>
+      <b>Sisa: ${rupiah(sisa)}</b>
+    </div>
+
+    <div class="footer-note">
+      Abadikan setiap momentmu bersama SkaOne Photograpy
+    </div>
+
+  </div>`;
+
+  document.getElementById("previewArea").innerHTML = html;
+}
+
+async function downloadPDF(){
+  const { jsPDF } = window.jspdf;
+
+  const invoice = document.getElementById("invoiceArea");
+  if(!invoice) return alert("Klik PREVIEW dulu!");
+
+  const canvas = await html2canvas(invoice,{
+    scale:2
+  });
+
+  const imgData = canvas.toDataURL("image/png");
+
+  const doc = new jsPDF("p","mm","a4");
+
+  const imgWidth = 190;
+  const pageHeight = 297;
+  const imgHeight = canvas.height * imgWidth / canvas.width;
+
+  doc.addImage(imgData,"PNG",10,10,imgWidth,imgHeight);
+
+  doc.save("INV-"+invoiceCounter+".pdf");
+  invoiceCounter++;
+}
+
+document.addEventListener("DOMContentLoaded",renderBarang);
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</body>
+</html>
