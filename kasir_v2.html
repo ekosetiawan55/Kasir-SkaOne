@@ -1,250 +1,130 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kasir PRO</title>
-
-<style>
-body{margin:0;font-family:Arial;background:#0f172a;color:#fff}
-.container{max-width:1100px;margin:auto;padding:16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-.card{background:#1f2937;padding:12px;border-radius:8px;cursor:pointer;text-align:center}
-.price{color:#f59e0b;font-weight:bold}
-.cart{background:#111827;padding:16px;border-radius:10px;margin-top:16px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:6px;border-bottom:1px solid #374151}
-button{padding:10px;border:none;border-radius:6px;background:#2563eb;color:white;font-weight:bold;cursor:pointer;margin-top:10px}
-.status-lunas{color:#22c55e;font-weight:bold}
-.status-belum{color:#ef4444;font-weight:bold}
-input{padding:8px;width:100%;margin-top:10px;border-radius:6px;border:none}
-</style>
-</head>
-
-<body>
-<div class="container">
-
-<h1>Kasir PRO</h1>
-
-<div id="barangKasir" class="grid"></div>
-
-<div class="cart">
-<table>
-<thead>
-<tr>
-<th>Barang</th>
-<th>Harga</th>
-<th>Qty</th>
-<th>Subtotal</th>
-</tr>
-</thead>
-<tbody id="cartBody"></tbody>
-</table>
-
-<h3>Total: <span id="totalHarga">Rp 0</span></h3>
-
-<input id="uangMuka" type="number" placeholder="Uang Muka (DP)">
-<div>Sisa Tagihan: <b id="sisaTagihan">Rp 0</b></div>
-<div>Status: <span id="statusPembayaran" class="status-belum">BELUM LUNAS</span></div>
-
-<button onclick="buatInvoice()">BUAT INVOICE</button>
-<button onclick="downloadPDF()">DOWNLOAD PDF</button>
-</div>
-
-</div>
-
-<!-- jsPDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 <script>
-const rupiah=n=>"Rp "+(n||0).toLocaleString("id-ID");
+let items=[];
 
-let cart={};
-let cartBackup=[];
-let lastDP=0;
-let invoiceCounter=1;
+fetch('barang.json')
+.then(res=>res.json())
+.then(data=>{
+    const select=document.getElementById('barangSelect');
+    data.forEach(b=>{
+        const opt=document.createElement('option');
+        opt.value=b.harga;
+        opt.text=b.nama + " - Rp" + b.harga.toLocaleString();
+        select.appendChild(opt);
+    });
+});
 
-async function getBarang(){
-  const res=await fetch("barang.json");
-  return await res.json();
+function generateInvoice(){
+    const now=new Date();
+    const code="SKA"+
+    now.getFullYear()+
+    String(now.getMonth()+1).padStart(2,'0')+
+    String(now.getDate()).padStart(2,'0')+
+    String(now.getHours()).padStart(2,'0')+
+    String(now.getMinutes()).padStart(2,'0')+
+    String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('invoiceNumber').value=code;
+}
+window.onload=generateInvoice;
+
+function tambahItem(){
+    const select=document.getElementById('barangSelect');
+    const nama=select.options[select.selectedIndex].text.split(" - ")[0];
+    const harga=parseInt(select.value);
+    const jumlah=parseInt(document.getElementById('jumlah').value);
+
+    const existing=items.find(i=>i.nama===nama);
+    if(existing){ 
+        existing.jumlah+=jumlah; 
+    }else{ 
+        items.push({nama,harga,jumlah}); 
+    }
+
+    renderTable();
 }
 
-async function renderBarang(){
-  const list=await getBarang();
-  const container=document.getElementById("barangKasir");
-  container.innerHTML="";
-  list.forEach(b=>{
-    container.innerHTML+=`
-      <div class="card" onclick="addCart(${b.id})">
-        ${b.nama}<br>
-        <span class="price">${rupiah(b.harga)}</span>
-      </div>`;
-  });
+function renderTable(){
+    const tbody=document.getElementById('itemTable');
+    tbody.innerHTML='';
+    let total=0;
+
+    items.forEach((item,index)=>{
+        const itemTotal=item.harga*item.jumlah;
+        total+=itemTotal;
+
+        tbody.innerHTML+=`
+        <tr>
+        <td>${index+1}</td>
+        <td>${item.nama}</td>
+        <td>${item.jumlah}</td>
+        <td class="right">Rp${item.harga.toLocaleString()}</td>
+        <td class="right">Rp${itemTotal.toLocaleString()}</td>
+        </tr>`;
+    });
+
+    /* ===== PERBAIKAN DP ===== */
+    const dpInput=document.getElementById('dp').value.replace(/\D/g,'');
+    const dp=parseInt(dpInput) || 0;
+    /* ========================= */
+
+    document.getElementById('subTotal').innerText="Rp"+total.toLocaleString();
+    document.getElementById('dpPreview').innerText="Rp"+dp.toLocaleString();
+    document.getElementById('sisaTagihan').innerText="Rp"+(total-dp).toLocaleString();
+
+    let status="Belum Dibayar";
+    if(dp>0 && dp<total) status="Belum Lunas (DP)";
+    if(dp>=total && total>0) status="Lunas";
+    document.getElementById('previewStatus').innerText=status;
+
+    updatePreview();
 }
 
-async function addCart(id){
-  const list=await getBarang();
-  const b=list.find(x=>x.id===id);
-  if(!cart[id]) cart[id]={...b,qty:0};
-  cart[id].qty++;
-  renderCart();
+function updatePreview(){
+    document.getElementById('previewInvoice').innerText=document.getElementById('invoiceNumber').value;
+    document.getElementById('previewTanggal').innerText=document.getElementById('tanggal').value;
+    document.getElementById('previewJatuhTempo').innerText=document.getElementById('jatuhTempo').value;
+    document.getElementById('previewNama').innerText=document.getElementById('nama').value;
+    document.getElementById('previewAlamat').innerText=document.getElementById('alamat').value;
 }
 
-function renderCart(){
-  const body=document.getElementById("cartBody");
-  body.innerHTML="";
-  let total=0;
+/* ===== FORMAT RIBUAN + VALIDASI DP ===== */
+document.getElementById('dp').addEventListener('input', function(e){
 
-  Object.values(cart).forEach(i=>{
-    const sub=i.qty*i.harga;
-    total+=sub;
-    body.innerHTML+=`
-      <tr>
-        <td>${i.nama}</td>
-        <td>${rupiah(i.harga)}</td>
-        <td>${i.qty}</td>
-        <td>${rupiah(sub)}</td>
-      </tr>`;
-  });
+    let value = e.target.value.replace(/\D/g,'');
 
-  document.getElementById("totalHarga").textContent=rupiah(total);
+    let subtotalText = document.getElementById('subTotal').innerText.replace(/\D/g,'');
+    let subtotal = parseInt(subtotalText) || 0;
 
-  const dp=+document.getElementById("uangMuka").value||0;
-  const sisa=total-dp;
+    let dp = parseInt(value) || 0;
 
-  document.getElementById("sisaTagihan").textContent=rupiah(sisa);
+    if(dp > subtotal){
+        dp = subtotal;
+    }
 
-  const statusEl=document.getElementById("statusPembayaran");
-  if(sisa<=0 && total>0){
-    statusEl.textContent="LUNAS";
-    statusEl.className="status-lunas";
-  }else{
-    statusEl.textContent="BELUM LUNAS";
-    statusEl.className="status-belum";
-  }
-}
+    e.target.value = dp.toLocaleString('id-ID');
 
-document.getElementById("uangMuka").oninput=renderCart;
+    renderTable();
+});
+/* ======================================== */
 
-function buatInvoice(){
-  const items=Object.values(cart);
-  if(!items.length) return alert("Belum ada transaksi!");
+document.getElementById('tanggal').addEventListener('input', renderTable);
+document.getElementById('jatuhTempo').addEventListener('input', renderTable);
+document.getElementById('nama').addEventListener('input', renderTable);
+document.getElementById('alamat').addEventListener('input', renderTable);
 
-  const total=items.reduce((a,b)=>a+b.qty*b.harga,0);
-  const dp=+document.getElementById("uangMuka").value||0;
-
-  cartBackup=JSON.parse(JSON.stringify(items));
-  lastDP=dp;
-
-  cart={};
-  document.getElementById("uangMuka").value="";
-  renderCart();
-}
-
+/* ===== PDF ===== */
 async function downloadPDF(){
-  const { jsPDF } = window.jspdf;
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p','mm','a4');
 
-  if(!cartBackup.length) return alert("Klik BUAT INVOICE dulu!");
+    const element = document.getElementById('invoice');
 
-  const total=cartBackup.reduce((a,b)=>a+b.qty*b.harga,0);
-  const dp=lastDP;
-  const sisa=total-dp;
-  const status=sisa<=0 ? "LUNAS" : "BELUM LUNAS";
+    const canvas = await html2canvas(element, { scale:2, useCORS:true });
+    const imgData = canvas.toDataURL('image/png');
 
-  const doc=new jsPDF("p","mm","a4");
-  const pageWidth=210;
+    const imgWidth = 210;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
 
-  let y=20;
-
-  // ===== LOAD LOGO =====
-  const logo = await loadImage("Logo.png");
-  doc.addImage(logo, "PNG", 15, 15, 35, 20);
-
-  // ===== HEADER =====
-  doc.setFontSize(20);
-  doc.text("INVOICE", pageWidth-20, 20, { align: "right" });
-
-  doc.setFontSize(11);
-  doc.text("No Invoice: INV-"+invoiceCounter, pageWidth-20, 28, { align: "right" });
-  doc.text("Tanggal: "+new Date().toLocaleString("id-ID"), pageWidth-20, 34, { align: "right" });
-
-  y=45;
-
-  // ===== TABLE HEADER =====
-  doc.setFillColor(30,41,59);
-  doc.rect(15,y,180,8,"F");
-
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(11);
-  doc.text("No",20,y+5);
-  doc.text("Item",30,y+5);
-  doc.text("Qty",130,y+5);
-  doc.text("Harga",145,y+5);
-  doc.text("Total",170,y+5);
-
-  y+=10;
-  doc.setTextColor(0,0,0);
-
-  // ===== TABLE BODY =====
-  cartBackup.forEach((i,index)=>{
-    const sub=i.qty*i.harga;
-
-    doc.text(String(index+1),20,y);
-    doc.text(i.nama,30,y);
-    doc.text(String(i.qty),132,y);
-    doc.text(rupiah(i.harga),145,y);
-    doc.text(rupiah(sub),170,y);
-
-    y+=8;
-  });
-
-  // ===== TOTAL SECTION =====
-  y+=10;
-
-  doc.setDrawColor(200);
-  doc.line(120,y,195,y);
-  y+=6;
-
-  doc.text("Total",130,y);
-  doc.text(rupiah(total),170,y,{align:"right"});
-  y+=8;
-
-  doc.text("Uang Muka",130,y);
-  doc.text(rupiah(dp),170,y,{align:"right"});
-  y+=8;
-
-  doc.setFontSize(12);
-  doc.text("Sisa Tagihan",130,y);
-  doc.text(rupiah(sisa),170,y,{align:"right"});
-  y+=12;
-
-  doc.setFontSize(13);
-  doc.text("Status: "+status,15,y);
-
-  doc.save("INV-"+invoiceCounter+".pdf");
-  invoiceCounter++;
+    pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight);
+    pdf.save('invoice.pdf');
 }
-
-
-// ===== HELPER LOAD IMAGE =====
-function loadImage(url){
-  return new Promise((resolve)=>{
-    const img=new Image();
-    img.crossOrigin="anonymous";
-    img.src=url;
-    img.onload=()=>{
-      const canvas=document.createElement("canvas");
-      canvas.width=img.width;
-      canvas.height=img.height;
-      const ctx=canvas.getContext("2d");
-      ctx.drawImage(img,0,0);
-      resolve(canvas.toDataURL("image/png"));
-    };
-  });
-}
-
-document.addEventListener("DOMContentLoaded",renderBarang);
 </script>
-
-</body>
-</html>
